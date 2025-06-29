@@ -1,19 +1,13 @@
-# cpu/condition_flags.py
-
 def check_condition(cond, cpsr):
-    if cond == 'AL':
-        return True
-    elif cond == 'EQ':
-        return cpsr['Z'] == 1
+    N = cpsr.get('N', 0)
+    Z = cpsr.get('Z', 0)
+    C = cpsr.get('C', 0)
+    V = cpsr.get('V', 0)
+
+    if cond == 'EQ':
+        return Z == 1
     elif cond == 'NE':
-        return cpsr['Z'] == 0
-    elif cond == 'LT':
-        return cpsr['N'] != cpsr['V']
-    elif cond == 'GE':
-        return cpsr['N'] == cpsr['V']
-    elif cond == 'GT':
-        return cpsr['Z'] == 0 and cpsr['N'] == cpsr['V']
-    elif cond == 'LE':
-        return cpsr['Z'] == 1 or cpsr['N'] != cpsr['V']
-    else:
-        return False  
+        return Z == 0
+    elif cond == 'AL':
+        return True
+    return False  # Default: fail
