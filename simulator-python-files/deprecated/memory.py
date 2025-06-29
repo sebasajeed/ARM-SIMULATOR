@@ -7,10 +7,7 @@ class Memory:
 		self.mem = bytearray(size) 
 
 	def load(self, address):
-		return (self.mem[address] | 
-(self.mem[address+1] << 8)| 
-(self.mem[address+2]<<16) |
- (self.mem[address+3]<<24))
+		return (self.mem[address] | (self.mem[address+1] << 8)| (self.mem[address+2]<<16) | (self.mem[address+3]<<24))
 
 	def store(self, address, value):
 		self.mem[address] = value & 0xFF
