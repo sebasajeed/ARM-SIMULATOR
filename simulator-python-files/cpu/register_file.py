@@ -1,27 +1,34 @@
+# cpu/register_file.py
+
 class RegisterFile:
     def __init__(self):
-        self.registers = [0] * 16
-        self.cpsr = {'N': 0, 'Z': 0, 'C': 0, 'V': 0}
+        self.registers = [0] * 16  # R0 to R15
+        self.PC_INDEX = 15
 
-    def get(self, reg_num):
-        return self.registers[reg_num]
+    def get(self, index):
+        return self.registers[index]
 
-    def set(self, reg_num, value):
-        print(f"[DEBUG] register_file.set(): Writing {value} to R{reg_num}")
-        self.registers[reg_num] = value & 0xFFFFFFFF
+    def set(self, index, value):
+        self.registers[index] = value & 0xFFFFFFFF  # Ensure 32-bit values
 
+    def get_pc(self):
+        return self.registers[self.PC_INDEX]
 
-    def set_flag(self, flag, value):
-        if flag in self.cpsr:
-            self.cpsr[flag] = 1 if value else 0
+    def set_pc(self, value):
+        print(f"[DEBUG] register_file.set_pc(): Setting PC to {value}")
+        self.registers[self.PC_INDEX] = value & 0xFFFFFFFF
 
-    def get_flag(self, flag):
-        return self.cpsr.get(flag, 0)
+    def write(self, index, value):
+        self.set(index, value)
 
-    def dump(self):
-        print("Registers:")
-        for i, val in enumerate(self.registers):
-            print(f"R{i} = {val}")
-        print("CPSR:")
-        for flag in self.cpsr:
-            print(f"{flag} = {self.cpsr[flag]}")
+    def read(self, index):
+        return self.get(index)
+
+    def __str__(self):
+        output = ""
+        for i in range(13):
+            output += f"R{i:2}: {self.get(i):08X}\n"
+        output += f"SP : {self.get(13):08X}\n"
+        output += f"LR : {self.get(14):08X}\n"
+        output += f"PC : {self.get_pc():08X}\n"
+        return output

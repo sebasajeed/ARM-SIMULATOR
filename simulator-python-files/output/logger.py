@@ -6,3 +6,9 @@ def log_instruction(pc, word, instr):
 
 def log_registers(regs):
     regs.dump()
+
+def debug(msg):
+    print(f"[DEBUG] {msg}")
+
+def error(msg):
+    print(f"[ERROR] {msg}")

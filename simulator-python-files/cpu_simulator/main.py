@@ -1,6 +1,6 @@
-import sys
-from memory.memory import Memory
 from cpu.cpu import CPU
+from memory.memory import Memory
+import sys
 
 def main():
     if len(sys.argv) < 2:
@@ -8,11 +8,15 @@ def main():
         return
 
     binary_file = sys.argv[1]
-    mem = Memory()
-    mem.load_binary(binary_file)
 
-    cpu = CPU(mem)
+    # Load binary data into memory
+    with open(binary_file, 'rb') as f:
+        data = f.read()
+
+    mem = Memory(data)  # ✅ Pass data to Memory
+    cpu = CPU(mem)      # ✅ Pass memory to CPU
+
     cpu.run()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

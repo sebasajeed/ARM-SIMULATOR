@@ -1,36 +1,11 @@
-def decode_instruction(raw_word):
-    if raw_word == 0x00000000:
-        return {
-            'mnemonic': 'NOP',
-            'operands': [],
-            'cond': 'AL',
-            'size': 4
-        }
-    elif raw_word == 0x00000001:
-        return {
-            'mnemonic': 'MOV',
-            'operands': [0, 1],  # MOV R0, #1
-            'cond': 'AL',
-            'size': 4
-        }
-    elif raw_word == 0x00000002:
-        return {
-            'mnemonic': 'ADD',
-            'operands': [1, 0, 1],  # ADD R1, R0, #1
-            'cond': 'AL',
-            'size': 4
-        }
-    elif raw_word == 0x00000003:
-        return {
-            'mnemonic': 'SUB',
-            'operands': [2, 1, 1],  # SUB R2, R1, #1
-            'cond': 'AL',
-            'size': 4
-        }
+# isa/decoder.py
+
+from isa.arm_instructions import decode_arm_instruction
+from isa.thumb_instructions import decode_thumb_instruction  # ✅ FIXED import
+
+def decode(instruction):
+    # ARM/Thumb mode detection can be more advanced, but for now assume 32-bit ARM
+    if (instruction & 0xFFFF0000) == 0:  # crude check for Thumb 16-bit
+        return decode_thumb_instruction(instruction & 0xFFFF)
     else:
-        return {
-            'mnemonic': 'NOP',
-            'operands': [],
-            'cond': 'AL',
-            'size': 4
-        }
+        return decode_arm_instruction(instruction)

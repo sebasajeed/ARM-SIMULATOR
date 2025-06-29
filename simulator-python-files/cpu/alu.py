@@ -1,33 +1,34 @@
 # cpu/alu.py
 
 class ALU:
-    def __init__(self, registers):
-        self.regs = registers
+    def __init__(self, registers, flags):
+        self.registers = registers
+        self.flags = flags
 
-    def add(self, op1, op2):
-        result = (op1 + op2) & 0xFFFFFFFF
-        self._update_flags(result)
-        return result
+    def execute(self, mnemonic, operands):
+        if mnemonic == "MOV":
+            dest, value = operands
+            self.registers.set(dest, value)
 
-    def sub(self, op1, op2):
-        result = (op1 - op2) & 0xFFFFFFFF
-        self._update_flags(result)
-        return result
+        elif mnemonic == "ADD":
+            dest, op1, op2 = operands
+            result = self.registers.get(op1) + self.registers.get(op2)
+            self.registers.set(dest, result)
+            self._update_flags(result)
 
-    def and_op(self, op1, op2):
-        result = op1 & op2
-        self._update_flags(result)
-        return result
+        elif mnemonic == "SUB":
+            dest, op1, op2 = operands
+            result = self.registers.get(op1) - self.registers.get(op2)
+            self.registers.set(dest, result)
+            self._update_flags(result)
 
-    def orr_op(self, op1, op2):
-        result = op1 | op2
-        self._update_flags(result)
-        return result
+        elif mnemonic == "NOP":
+            pass  # No operation
 
-    def cmp(self, op1, op2):
-        result = (op1 - op2) & 0xFFFFFFFF
-        self._update_flags(result)
+        else:
+            print(f"[ALU] Unsupported instruction: {mnemonic}")
 
     def _update_flags(self, result):
-        self.regs.set_flag('Z', int(result == 0))
-        self.regs.set_flag('N', int((result >> 31) & 1))
+        self.flags.N = int(result < 0)
+        self.flags.Z = int(result == 0)
+        # For simplicity, carry and overflow flags are not updated here
