@@ -1,40 +1,30 @@
 # memory/memory.py
 
 class Memory:
-    def __init__(self, data: bytes):
-        self.data = bytearray(data)
+    def __init__(self, size):
+        self.data = bytearray(size)
 
-    def load(self, address: int, size: int = 4) -> int:
-        """Load `size` bytes starting from `address` and return as an int (little-endian)."""
-        if address + size > len(self.data):
-            raise IndexError(f"Memory read out of bounds at address {address}")
-        return int.from_bytes(self.data[address:address + size], byteorder='little')
+    def load(self, data: bytes, start_address: int = 0):
+        self.data[start_address:start_address + len(data)] = data
 
-    def load_word(self, address: int) -> int:
-        """Load a 4-byte word from memory."""
-        return self.load(address, size=4)
+    def read_byte(self, address: int) -> int:
+        return self.data[address]
 
-    def load_halfword(self, address: int) -> int:
-        """Load a 2-byte halfword from memory."""
-        return self.load(address, size=2)
+    def write_byte(self, address: int, value: int):
+        self.data[address] = value & 0xFF
 
-    def store(self, address: int, value: int, size: int = 4):
-        """Store `value` as `size` bytes at `address` (little-endian)."""
-        if address + size > len(self.data):
-            raise IndexError(f"Memory write out of bounds at address {address}")
-        self.data[address:address + size] = value.to_bytes(size, byteorder='little')
+    def read_word(self, address: int) -> int:
+        """Reads a 32-bit word from memory starting at the given address (little-endian)."""
+        return (
+            self.data[address]
+            | (self.data[address + 1] << 8)
+            | (self.data[address + 2] << 16)
+            | (self.data[address + 3] << 24)
+        )
 
-    def store_word(self, address: int, value: int):
-        """Store a 4-byte word into memory."""
-        self.store(address, value, size=4)
-
-    def store_halfword(self, address: int, value: int):
-        """Store a 2-byte halfword into memory."""
-        self.store(address, value, size=2)
-
-    def size(self):
-        """Return the size of memory in bytes."""
-        return len(self.data)
-
-    def __len__(self):
-        return len(self.data)
+    def write_word(self, address: int, value: int):
+        """Writes a 32-bit word to memory at the given address (little-endian)."""
+        self.data[address] = value & 0xFF
+        self.data[address + 1] = (value >> 8) & 0xFF
+        self.data[address + 2] = (value >> 16) & 0xFF
+        self.data[address + 3] = (value >> 24) & 0xFF

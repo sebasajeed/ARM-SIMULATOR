@@ -1,101 +1,83 @@
 # cpu/cpu.py
 
-from isa.decoder import decode
+from cpu.alu import ALU
 from cpu.register_file import RegisterFile
 from cpu.condition_flags import ConditionFlags
-from cpu.alu import ALU
-from memory.memory import Memory
-from output.logger import debug, error
+from isa.decoder import decode
+from output.logger import debug, error, info
 
 class CPU:
     def __init__(self, memory):
-        self.register_file = RegisterFile()
+        self.memory = memory  # ✅ Memory object, not data
+        self.registers = RegisterFile()
         self.flags = ConditionFlags()
-        self.alu = ALU(self.register_file, self.flags)
-        self.memory = memory if isinstance(memory, Memory) else Memory(memory)
+        self.alu = ALU(self.registers, self.flags)
+        self.running = True
 
     def fetch(self):
-        pc = self.register_file.get_pc()
-        instruction = self.memory.load_word(pc)
-        debug(f"fetch(): PC = {pc}, instruction = 0x{instruction:08x}")
-        self.register_file.set_pc(pc + 4)
-        return instruction
+        pc = self.registers.get_pc()
+        try:
+            instruction = self.memory.read_word(pc)
+        except IndexError:
+            error(f"Memory read out of bounds at address {pc}")
+            self.running = False
+            return 0, pc  # Return dummy instruction to avoid crash
+        debug(f"fetch(): PC = {pc}, instruction = {instruction:08x}")
+        self.registers.set_pc(pc + 4)
+        return instruction, pc
 
-    def decode(self, instruction):
-        decoded = decode(instruction)
+    def decode_execute(self, instruction, pc):
+        decoded = decode(instruction, pc)
         debug(f"decode(): Decoded instruction: {decoded}")
-        return decoded
+        if decoded is None:
+            error("decode(): Could not decode instruction")
+            self.running = False
+            return
 
-    def execute_instruction(self, decoded):
-        mnemonic = decoded["mnemonic"]
-        operands = decoded["operands"]
+        # Execute (only data-processing for now)
+        if decoded['type'] == 'DP':
+            self.execute_dp(decoded)
 
-        if mnemonic == "MOV":
-            dest = int(operands[0][1:])
-            val = self._parse_operand(operands[1])
-            self.register_file.write(dest, val)
+    def execute_dp(self, instr):
+        mnemonic = instr['mnemonic']
+        operands = instr['operands']
 
-        elif mnemonic == "ADD":
+        if mnemonic == 'MOV':
+            rd = int(operands[0][1:])
+            if operands[1].startswith('#'):
+                value = int(operands[1][1:])
+            else:
+                value = self.registers.read(int(operands[1][1:]))
+            self.registers.write(rd, value)
+
+        elif mnemonic in ['ADD', 'SUB', 'ADC']:
             rd = int(operands[0][1:])
             rn = int(operands[1][1:])
-            op2 = self._parse_operand(operands[2])
-            val = self.register_file.read(rn) + op2
-            self.register_file.write(rd, val)
+            op2 = operands[2]
 
-        elif mnemonic == "SUB":
-            rd = int(operands[0][1:])
-            rn = int(operands[1][1:])
-            op2 = self._parse_operand(operands[2])
-            val = self.register_file.read(rn) - op2
-            self.register_file.write(rd, val)
+            if op2.startswith('#'):
+                value2 = int(op2[1:])
+            else:
+                value2 = self.registers.read(int(op2[1:]))
 
-        elif mnemonic == "LDR":
-            rd = int(operands[0][1:])
-            addr = self._parse_memory_address(operands[1])
-            val = self.memory.load_word(addr)
-            self.register_file.write(rd, val)
+            value1 = self.registers.read(rn)
+            if mnemonic == 'ADD':
+                result = value1 + value2
+            elif mnemonic == 'SUB':
+                result = value1 - value2
+            elif mnemonic == 'ADC':
+                result = value1 + value2 + (1 if self.flags.C else 0)
 
-        elif mnemonic == "STR":
-            rd = int(operands[0][1:])
-            addr = self._parse_memory_address(operands[1])
-            val = self.register_file.read(rd)
-            self.memory.store_word(addr, val)
-
-        elif mnemonic == "B":
-            target = int(operands[0])
-            self.register_file.set_pc(target)
-
-        elif mnemonic == "CMP":
-            rn = int(operands[0][1:])
-            op2 = self._parse_operand(operands[1])
-            result = self.register_file.read(rn) - op2
-            self.flags.update_flags(result)
-
-        elif mnemonic == "INVALID FORMAT":
-            error("Invalid decoded format")
-
-    def _parse_operand(self, op):
-        if op.startswith("#"):
-            return int(op[1:])
-        elif op.startswith("R"):
-            return self.register_file.read(int(op[1:]))
-        else:
-            raise ValueError(f"Unknown operand format: {op}")
-
-    def _parse_memory_address(self, addr_str):
-        # parses format like "[R2, #8]"
-        addr_str = addr_str.strip("[]")
-        parts = addr_str.split(",")
-        base = self.register_file.read(int(parts[0][1:]))
-        offset = int(parts[1].strip()[1:]) if len(parts) > 1 else 0
-        return base + offset
+            self.registers.write(rd, result)
 
     def run(self):
-        while True:
+        while self.running:
             try:
-                instruction = self.fetch()
-                decoded = self.decode(instruction)
-                self.execute_instruction(decoded)
+                instr, pc = self.fetch()
+                self.decode_execute(instr, pc)
             except Exception as e:
                 error(str(e))
-                break
+                self.running = False
+
+        print("\n==== Final Register State ====")
+        print(self.registers)
